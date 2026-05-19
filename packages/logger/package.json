@@ -1,0 +1,22 @@
+{
+    "name": "@shoppingcart/logger",
+    "version": "1.0.0",
+    "main": "src/index.ts",
+    "type": "module",
+    "publishConfig": {
+        "main": "dist/index.js",
+        "types": "dist/index.d.ts"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "lint": "eslint ./src",
+        "lint:fix": "eslint ./src --fix"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "packageManager": "pnpm@10.26.1",
+    "dependencies": {
+        "pino": "^10.3.1"
+    }
+}
