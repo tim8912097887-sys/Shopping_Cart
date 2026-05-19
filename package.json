@@ -16,5 +16,8 @@
     "scripts": {
         "prepare": "husky",
         "lint": "pnpm -r lint"
+    },
+    "dependencies": {
+        "zod": "^4.4.3"
     }
 }
