@@ -1,0 +1,67 @@
+services:
+    user_service_db:
+        image: postgres:14-alpine
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: user_service
+        ports:
+            - 5432:5432
+        volumes:
+            - user_service_db_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres -d user_service']
+            interval: 5s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        networks:
+            - shopping_cart_network
+    # Add a migration service for the auth_service to run migrations before starting the main service
+    user_migration:
+        build:
+            context: .
+            dockerfile: ./services/user-service/Dockerfile
+        # Overwrite the default start command with your migration script
+        command: node dist/infrastructure/db/migrate.js
+        env_file:
+            - ./services/user-service/.env.dev
+        depends_on:
+            user_service_db:
+                condition: service_healthy
+        networks:
+            - shopping_cart_network
+    user_service:
+        build:
+            context: .
+            dockerfile: ./services/user-service/Dockerfile
+        ports:
+            - 3001:3001
+        env_file:
+            - ./services/user-service/.env.dev
+        networks:
+            - shopping_cart_network
+        depends_on:
+            user_service_db:
+                condition: service_healthy
+            user_migration:
+                condition: service_completed_successfully
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'wget',
+                    '--spider',
+                    '-q',
+                    'http://localhost:3001/health',
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 20s
+        restart: always
+volumes:
+    user_service_db_data:
+networks:
+    shopping_cart_network:
+        driver: bridge

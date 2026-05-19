@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 export async function initializeApp() {
     const app = Fastify({
         logger: true,
+        requestIdHeader: 'X-Request-Id',
     });
 
     // Health check

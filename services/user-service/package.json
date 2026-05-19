@@ -5,13 +5,15 @@
     "main": "index.js",
     "type": "module",
     "imports": {
-        "#*": "./src/*"
+        "#*": "./dist/*"
     },
     "scripts": {
         "dev": "tsx watch --env-file=.env.dev src/server.ts",
         "build": "tsc -p tsconfig.build.json",
         "lint": "eslint ./src",
-        "lint:fix": "eslint ./src --fix"
+        "lint:fix": "eslint ./src --fix",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate"
     },
     "keywords": [],
     "author": "",
@@ -19,6 +21,18 @@
     "packageManager": "pnpm@10.26.1",
     "dependencies": {
         "@shoppingcart/logger": "workspace:*",
-        "fastify": "^5.8.5"
+        "bcrypt-ts": "catalog:",
+        "dotenv": "catalog:",
+        "drizzle-orm": "catalog:",
+        "fastify": "catalog:",
+        "jose": "catalog:",
+        "pg": "catalog:",
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@types/pg": "catalog:",
+        "drizzle-kit": "catalog:",
+        "tsx": "catalog:",
+        "typescript": "catalog:"
     }
 }

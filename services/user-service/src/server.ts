@@ -3,6 +3,8 @@ import type { FastifyInstance } from 'fastify';
 import { initializeApp } from './app.js';
 import { env } from '#config/env.js';
 import { logger } from '#config/logger.js';
+import { dbServer } from '#infrastructure/db/index.js';
+import { shutdown } from '#common/utils/shutdown.js';
 
 class AppServer {
     private static instance: AppServer;
@@ -27,16 +29,24 @@ class AppServer {
 
     public async start(): Promise<void> {
         try {
+            await dbServer.testConnection();
             this.app = await initializeApp();
-
             await this.app.listen({
                 port: env.PORT,
                 host: '0.0.0.0',
             });
 
-            logger.info(`Server started on port ${env.PORT}`);
+            logger.info({
+                event: 'server_started',
+                service: 'user-service',
+                port: env.PORT,
+            });
         } catch (error) {
-            logger.error(error, 'Failed to start server');
+            logger.error({
+                event: 'server_start_failed',
+                service: 'user-service',
+                err: error,
+            });
 
             process.exit(1);
         }
@@ -66,14 +76,26 @@ class AppServer {
 
         this.isShutdown = true;
 
-        logger.info(`${signal} received. Starting graceful shutdown...`);
+        logger.info({
+            event: 'shutdown_initiated',
+            service: 'user-service',
+            signal,
+        });
 
         if (reason) {
-            logger.error(reason);
+            logger.error({
+                event: 'shutdown_reason',
+                service: 'user-service',
+                reason,
+            });
         }
 
         const forceExit = setTimeout(() => {
-            logger.error('Graceful shutdown timeout exceeded');
+            logger.error({
+                event: 'shutdown_timeout_exceeded',
+                service: 'user-service',
+                timeoutMs: this.shutdownTimeout,
+            });
 
             process.exit(1);
         }, this.shutdownTimeout);
@@ -83,13 +105,21 @@ class AppServer {
                 await this.app.close();
             }
 
+            await shutdown();
             clearTimeout(forceExit);
 
-            logger.info('Shutdown completed');
+            logger.info({
+                event: 'shutdown_completed',
+                service: 'user-service',
+            });
 
             process.exit(0);
         } catch (error) {
-            logger.error(error, 'Shutdown failed');
+            logger.error({
+                event: 'shutdown_failed',
+                service: 'user-service',
+                err: error,
+            });
 
             process.exit(1);
         }

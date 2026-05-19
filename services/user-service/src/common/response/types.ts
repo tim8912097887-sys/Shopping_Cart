@@ -1,7 +1,5 @@
-// common/http/response.ts
-
 export type AppSuccess<T> = {
-    state: 'success';
+    state: "success";
     data: T;
     error: null;
     meta: {
@@ -10,7 +8,7 @@ export type AppSuccess<T> = {
 };
 
 export type AppError = {
-    state: 'error';
+    state: "error";
     data: null;
     error: {
         code: string;
