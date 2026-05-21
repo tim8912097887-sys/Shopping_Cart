@@ -34,5 +34,8 @@ jobs:
                   cache-dependency-path: "pnpm-lock.yaml"
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
+            # Build shared logger first
+            - name: Build Shared Logger
+              run: pnpm --filter @shoppingcart/logger run build
             - name: Run build
-              run: pnpm --filter ./services/user-service... run build
+              run: pnpm --filter ./services/user-service run build
