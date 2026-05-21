@@ -131,7 +131,7 @@ export function authService(deps: {
             return {
                 requires2FA: true,
                 userId: user.id,
-            };
+            } as const;
         }
 
         return issueSession({
@@ -216,7 +216,7 @@ export function authService(deps: {
 
         return {
             enabled: true,
-        };
+        } as const;
     }
 
     // =================================
@@ -299,7 +299,7 @@ export function authService(deps: {
 
         return {
             disabled: true,
-        };
+        } as const;
     }
 
     // =================================

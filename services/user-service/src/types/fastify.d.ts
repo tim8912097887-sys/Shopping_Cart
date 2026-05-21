@@ -1,8 +1,8 @@
 import "fastify";
 import { AuthService } from "#modules/auth/types.js";
-import { authRepository } from "#modules/auth/repository.js";
 import { tokenService } from "#modules/auth/token.js";
 import { twoFactorService } from "#modules/auth/two-factor.js";
+import { authRepository } from "#modules/auth/repository.js";
 
 declare module "fastify" {
     interface FastifyInstance {

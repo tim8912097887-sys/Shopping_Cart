@@ -1,0 +1,38 @@
+name: CI-user-service-Test
+on:
+    push:
+        branches:
+            - main
+            - dev
+            - feat/**
+            - fix/**
+        paths:
+            - "services/user-service/**"
+    pull_request:
+        branches:
+            - main
+            - dev
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+jobs:
+    user-service-test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Pnpm
+              uses: pnpm/action-setup@v3
+              with:
+                  version: 10.26.1
+                  standalone: true
+            - name: Set up Node.js 20
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+                  cache: pnpm
+                  cache-dependency-path: "pnpm-lock.yaml"
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Run test
+              run: pnpm --filter ./services/user-service run test
