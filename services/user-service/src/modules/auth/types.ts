@@ -1,5 +1,4 @@
-import { authService } from "./service.js";
-import { twoFactorService } from "./two-factor.js";
+import type { RegisterUserType } from "./schema.js";
 
 export interface AuthRepository {
     findByEmail(email: string): Promise<null>;
@@ -16,6 +15,74 @@ export interface TokenService {
     verifyAccessToken(token: string): AccessPayload;
 }
 
-export type TwoFactorService = ReturnType<typeof twoFactorService>;
+export interface SessionTokens {
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+}
 
-export type ReturnTypeAuthService = ReturnType<typeof authService>;
+export interface RefreshTokensResult {
+    accessToken: string;
+    refreshToken: string;
+}
+
+export interface TwoFactorSetupResult {
+    secret: string;
+    otpAuthUrl: string;
+    qrcode: string;
+}
+
+export type LoginResult = SessionTokens | { requires2FA: true; userId: string };
+
+export interface AuthService {
+    signup(
+        input: RegisterUserType,
+    ): Promise<{ id: string; email: string } | undefined>;
+
+    login(input: {
+        email: string;
+        password: string;
+        userAgent: string | undefined;
+        ip: string | undefined;
+    }): Promise<LoginResult>;
+
+    verify2FA(input: {
+        userId: string;
+        code: string;
+        userAgent: string | undefined;
+        ip: string | undefined;
+    }): Promise<SessionTokens>;
+
+    refresh(refreshToken: string): Promise<RefreshTokensResult>;
+
+    logout(sessionId: string): Promise<void>;
+
+    logoutAll(userId: string): Promise<void>;
+
+    setup2FA(userId: string): Promise<TwoFactorSetupResult>;
+
+    confirm2FA(input: {
+        userId: string;
+        code: string;
+    }): Promise<{ enabled: true }>;
+
+    disable2FA(userId: string): Promise<{ disabled: true }>;
+}
+
+export type TotpSecret = string;
+
+export interface GenerateOtpAuthUrlInput {
+    email: string;
+    secret: TotpSecret;
+    issuer: string;
+}
+
+export interface TwoFactorService {
+    generateSecret(): TotpSecret;
+
+    generateOtpAuthUrl(input: GenerateOtpAuthUrlInput): string;
+
+    generateCode(secret: TotpSecret): string;
+
+    verifyTotp(secret: TotpSecret, code: string): boolean;
+}

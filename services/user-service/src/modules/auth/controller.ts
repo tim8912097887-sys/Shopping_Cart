@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { ReturnTypeAuthService } from "./types.js";
+import type { AuthService } from "./types.js";
 import { InvalidRefreshTokenError } from "./error.js";
 import {
     Confirm2FAType,
@@ -10,8 +10,6 @@ import {
 } from "./schema.js";
 import { clearRefreshCookie, setRefreshCookie } from "./util.js";
 import { successResponse } from "#common/response/success.js";
-
-type AuthService = ReturnTypeAuthService;
 
 export function authController(deps: { service: AuthService }) {
     const { service } = deps;
