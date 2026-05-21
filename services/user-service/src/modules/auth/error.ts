@@ -1,16 +1,6 @@
 // modules/auth/auth.errors.ts
 import { DomainError } from "#common/errors/domain.js";
 
-export class EmailAlreadyExistsError extends DomainError {
-    readonly code = "EMAIL_ALREADY_EXISTS";
-
-    constructor(email: string) {
-        super("Email already exists", {
-            email,
-        });
-    }
-}
-
 export class InvalidCredentialsError extends DomainError {
     readonly code = "INVALID_CREDENTIALS";
 
@@ -87,6 +77,55 @@ export class SessionNotFoundError extends DomainError {
 
     constructor(sessionId: string) {
         super("Session not found", {
+            sessionId,
+        });
+    }
+}
+
+export class AccountLockedError extends DomainError {
+    readonly code = "ACCOUNT_LOCKED";
+
+    constructor(userId: string, lockedUntil: Date) {
+        super("Account locked", {
+            userId,
+            lockedUntil,
+        });
+    }
+}
+
+export class TwoFactorNotEnabledError extends DomainError {
+    readonly code = "TWO_FACTOR_NOT_ENABLED";
+
+    constructor(userId: string) {
+        super("2FA not enabled", {
+            userId,
+        });
+    }
+}
+
+export class InvalidTwoFactorCodeError extends DomainError {
+    readonly code = "INVALID_TWO_FACTOR_CODE";
+
+    constructor(userId: string) {
+        super("Invalid 2FA code", {
+            userId,
+        });
+    }
+}
+
+export class InvalidRefreshTokenError extends DomainError {
+    readonly code = "INVALID_REFRESH_TOKEN";
+
+    constructor() {
+        super("Invalid refresh token");
+    }
+}
+
+export class RefreshTokenReuseDetectedError extends DomainError {
+    readonly code = "REFRESH_TOKEN_REUSE_DETECTED";
+
+    constructor(sessionId: string) {
+        super("Refresh token reuse detected", {
             sessionId,
         });
     }

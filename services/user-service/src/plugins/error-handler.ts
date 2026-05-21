@@ -1,14 +1,13 @@
-// plugins/error-handler.ts
 import type {
     FastifyError,
     FastifyInstance,
     FastifyReply,
     FastifyRequest,
-} from 'fastify';
+} from "fastify";
 
-import { DomainError } from '#common/errors/domain.js';
+import { DomainError } from "#common/errors/domain.js";
 
-import { errorResponse } from '#common/response/error.js';
+import { errorResponse } from "#common/response/error.js";
 
 export async function registerErrorHandler(app: FastifyInstance) {
     app.setErrorHandler(
@@ -27,10 +26,10 @@ export async function registerErrorHandler(app: FastifyInstance) {
             }
 
             // Fastify validation errors
-            if ('validation' in error) {
+            if ("validation" in error) {
                 return reply
                     .status(400)
-                    .send(errorResponse('VALIDATION_ERROR', error.message));
+                    .send(errorResponse("VALIDATION_ERROR", error.message));
             }
 
             // Unknown errors
@@ -40,8 +39,8 @@ export async function registerErrorHandler(app: FastifyInstance) {
                 .status(500)
                 .send(
                     errorResponse(
-                        'INTERNAL_SERVER_ERROR',
-                        'Internal server error',
+                        "INTERNAL_SERVER_ERROR",
+                        "Internal server error",
                     ),
                 );
         },
@@ -50,31 +49,31 @@ export async function registerErrorHandler(app: FastifyInstance) {
 
 function mapErrorToStatus(code: string): number {
     switch (code) {
-        case 'INVALID_CREDENTIALS':
+        case "INVALID_CREDENTIALS":
             return 401;
 
-        case 'EMAIL_ALREADY_EXISTS':
+        case "EMAIL_ALREADY_EXISTS":
             return 409;
 
-        case 'USER_NOT_VERIFIED':
+        case "USER_NOT_VERIFIED":
             return 403;
 
-        case 'SESSION_NOT_FOUND':
+        case "SESSION_NOT_FOUND":
             return 404;
 
-        case 'VERIFICATION_CODE_EXPIRED':
+        case "VERIFICATION_CODE_EXPIRED":
             return 410;
 
-        case 'INVALID_VERIFICATION_CODE':
+        case "INVALID_VERIFICATION_CODE":
             return 400;
 
-        case 'TOO_MANY_VERIFICATION_REQUESTS':
+        case "TOO_MANY_VERIFICATION_REQUESTS":
             return 429;
 
-        case 'REFRESH_TOKEN_EXPIRED':
+        case "REFRESH_TOKEN_EXPIRED":
             return 401;
 
-        case 'REFRESH_TOKEN_REVOKED':
+        case "REFRESH_TOKEN_REVOKED":
             return 401;
 
         default:

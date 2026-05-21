@@ -20,17 +20,24 @@
     "license": "ISC",
     "packageManager": "pnpm@10.26.1",
     "dependencies": {
+        "@fastify/cookie": "catalog:",
+        "@fastify/jwt": "catalog:",
         "@shoppingcart/logger": "workspace:*",
         "bcrypt-ts": "catalog:",
         "dotenv": "catalog:",
         "drizzle-orm": "catalog:",
         "fastify": "catalog:",
+        "fastify-plugin": "catalog:",
+        "fastify-type-provider-zod": "catalog:",
         "jose": "catalog:",
+        "otpauth": "catalog:",
         "pg": "catalog:",
+        "qrcode": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {
         "@types/pg": "catalog:",
+        "@types/qrcode": "catalog:",
         "drizzle-kit": "catalog:",
         "tsx": "catalog:",
         "typescript": "catalog:"
