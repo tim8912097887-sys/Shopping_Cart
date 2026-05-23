@@ -14,6 +14,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/user-service/package.json ./services/user-service/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/message-broker/package.json ./packages/message-broker/
 
 # ==========================================
 # 2. Development & Build Stage

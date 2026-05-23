@@ -1,10 +1,8 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from "fastify";
 
-import { initializeApp } from './app.js';
-import { env } from '#config/env.js';
-import { logger } from '#config/logger.js';
-import { dbServer } from '#infrastructure/db/index.js';
-import { shutdown } from '#common/utils/shutdown.js';
+import { initializeApp } from "./app.js";
+import { env } from "#config/env.js";
+import { logger } from "#config/logger.js";
 
 class AppServer {
     private static instance: AppServer;
@@ -29,22 +27,21 @@ class AppServer {
 
     public async start(): Promise<void> {
         try {
-            await dbServer.testConnection();
             this.app = await initializeApp();
             await this.app.listen({
                 port: env.PORT,
-                host: '0.0.0.0',
+                host: "0.0.0.0",
             });
 
             logger.info({
-                event: 'server_started',
-                service: 'user-service',
+                event: "server_started",
+                service: "user-service",
                 port: env.PORT,
             });
         } catch (error) {
             logger.error({
-                event: 'server_start_failed',
-                service: 'user-service',
+                event: "server_start_failed",
+                service: "user-service",
                 err: error,
             });
 
@@ -53,22 +50,23 @@ class AppServer {
     }
 
     private setupProcessHandlers(): void {
-        process.on('SIGINT', () => this.gracefulShutdown('SIGINT'));
+        process.on("SIGINT", () => this.gracefulShutdown("SIGINT"));
 
-        process.on('SIGTERM', () => this.gracefulShutdown('SIGTERM'));
+        process.on("SIGTERM", () => this.gracefulShutdown("SIGTERM"));
 
-        process.on('uncaughtException', (error) =>
-            this.gracefulShutdown('uncaughtException', error),
+        process.on("uncaughtException", (error) =>
+            this.gracefulShutdown("uncaughtException", error, 1),
         );
 
-        process.on('unhandledRejection', (reason) =>
-            this.gracefulShutdown('unhandledRejection', reason),
+        process.on("unhandledRejection", (reason) =>
+            this.gracefulShutdown("unhandledRejection", reason, 1),
         );
     }
 
     private async gracefulShutdown(
         signal: string,
         reason?: unknown,
+        code = 0,
     ): Promise<void> {
         if (this.isShutdown) {
             return;
@@ -77,23 +75,23 @@ class AppServer {
         this.isShutdown = true;
 
         logger.info({
-            event: 'shutdown_initiated',
-            service: 'user-service',
+            event: "shutdown_initiated",
+            service: "user-service",
             signal,
         });
 
         if (reason) {
             logger.error({
-                event: 'shutdown_reason',
-                service: 'user-service',
+                event: "shutdown_reason",
+                service: "user-service",
                 reason,
             });
         }
 
         const forceExit = setTimeout(() => {
             logger.error({
-                event: 'shutdown_timeout_exceeded',
-                service: 'user-service',
+                event: "shutdown_timeout_exceeded",
+                service: "user-service",
                 timeoutMs: this.shutdownTimeout,
             });
 
@@ -105,19 +103,18 @@ class AppServer {
                 await this.app.close();
             }
 
-            await shutdown();
             clearTimeout(forceExit);
 
             logger.info({
-                event: 'shutdown_completed',
-                service: 'user-service',
+                event: "shutdown_completed",
+                service: "user-service",
             });
 
-            process.exit(0);
+            process.exit(code);
         } catch (error) {
             logger.error({
-                event: 'shutdown_failed',
-                service: 'user-service',
+                event: "shutdown_failed",
+                service: "user-service",
                 err: error,
             });
 

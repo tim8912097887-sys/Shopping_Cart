@@ -67,6 +67,10 @@ export interface AuthService {
     }): Promise<{ enabled: true }>;
 
     disable2FA(userId: string): Promise<{ disabled: true }>;
+    verifyAccount(verifyInfo: {
+        code: string;
+        email: string;
+    }): Promise<{ verified: true }>;
 }
 
 export type TotpSecret = string;
@@ -86,3 +90,27 @@ export interface TwoFactorService {
 
     verifyTotp(secret: TotpSecret, code: string): boolean;
 }
+
+export type OtpType = "email_verification";
+
+export type CreateOtpInfo = {
+    userId: string;
+    code: string;
+    otpType: OtpType;
+};
+
+export type GetOtpInfo = {
+    userId: string;
+    otpType: OtpType;
+};
+
+export type OtpRepository = {
+    createOtp(createOtpInfo: CreateOtpInfo): Promise<string>;
+    getOtp(
+        getOtpInfo: GetOtpInfo,
+    ): Promise<{ code: string; attempt: number; createdAt: string }>;
+    incrementOtpAttempt(getOtpInfo: GetOtpInfo): Promise<number>;
+    deleteOtp(getOtpInfo: GetOtpInfo): Promise<number>;
+    getCooldownTtl(getOtpInfo: GetOtpInfo): Promise<number>;
+    otpExists(getOtpInfo: GetOtpInfo): Promise<number>;
+};

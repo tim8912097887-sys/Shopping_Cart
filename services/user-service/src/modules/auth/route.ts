@@ -7,6 +7,7 @@ import {
     LoginUserSchema,
     RegisterUserSchema,
     verify2FASchema,
+    VerifyAccountSchema,
 } from "./schema.js";
 
 export async function authRoutes(app: FastifyInstance) {
@@ -78,5 +79,15 @@ export async function authRoutes(app: FastifyInstance) {
             preHandler: [app.authenticate],
         },
         controller.logoutAll,
+    );
+
+    app.post(
+        "/verify-account",
+        {
+            schema: {
+                body: VerifyAccountSchema,
+            },
+        },
+        controller.verifyAccount,
     );
 }

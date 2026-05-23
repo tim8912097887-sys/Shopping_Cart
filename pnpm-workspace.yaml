@@ -32,3 +32,5 @@ catalog:
     "@fastify/jwt": ^10.1.0
     "@fastify/cookie": ^11.0.2
     fastify-type-provider-zod: ^6.1.0
+    kafkajs: ^2.2.4
+    redis: ^5.12.1

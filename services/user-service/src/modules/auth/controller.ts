@@ -7,6 +7,7 @@ import {
     LoginUserType,
     RegisterUserType,
     Verify2FAType,
+    VerifyAccountType,
 } from "./schema.js";
 import { clearRefreshCookie, setRefreshCookie } from "./util.js";
 import { successResponse } from "#common/response/success.js";
@@ -60,6 +61,20 @@ export function authController(deps: { service: AuthService }) {
         };
 
         return okResponse(reply, 200, data);
+    }
+
+    // =========================
+    // VERIFY ACCOUNT
+    // =========================
+    async function verifyAccount(
+        req: FastifyRequest<{
+            Body: VerifyAccountType;
+        }>,
+        reply: FastifyReply,
+    ) {
+        const result = await service.verifyAccount(req.body);
+
+        return okResponse(reply, 200, result);
     }
 
     // =========================
@@ -180,5 +195,6 @@ export function authController(deps: { service: AuthService }) {
         refresh,
         logout,
         logoutAll,
+        verifyAccount,
     };
 }
