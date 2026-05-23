@@ -9,6 +9,8 @@ export default fp(async function (app) {
             tokenService: app.tokenService,
             twoFactorService: app.twoFactorService,
             logger: app.log,
+            otpRepo: app.otpRepo,
+            producer: app.producer,
         }),
     );
 });

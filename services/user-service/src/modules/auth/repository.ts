@@ -234,6 +234,16 @@ export function authRepository(db: DB) {
                 })
                 .where(eq(auth.id, userId));
         },
+
+        async updateVerifiedAt(userId: string) {
+            await db
+                .update(auth)
+                .set({
+                    verifiedAt: new Date(),
+                    updatedAt: new Date(),
+                })
+                .where(eq(auth.id, userId));
+        },
     };
 }
 

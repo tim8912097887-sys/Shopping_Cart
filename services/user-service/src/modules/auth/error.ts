@@ -130,3 +130,18 @@ export class RefreshTokenReuseDetectedError extends DomainError {
         });
     }
 }
+
+export class InvalidOtpError extends DomainError {
+    readonly code = "INVALID_OTP";
+    constructor() {
+        super("Invalid verification code");
+    }
+}
+
+export class OtpExpiredError extends DomainError {
+    readonly code = "OTP_EXPIRED";
+
+    constructor() {
+        super("Verification code expired");
+    }
+}

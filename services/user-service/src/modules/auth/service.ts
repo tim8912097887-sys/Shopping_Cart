@@ -1,32 +1,42 @@
 import {
+    compareOTP,
     comparePassword,
     compareRefreshToken,
+    generateOTP,
     generateQrCode,
     generateRefreshToken,
     hashPassword,
     hashRefreshToken,
+    loginAttemptHandle,
 } from "./util.js";
 import type { AuthRepository } from "./repository.js";
-import { TokenService, TwoFactorService } from "./types.js";
+import { TokenService, TwoFactorService, OtpRepository } from "./types.js";
 import {
     AccountLockedError,
     InvalidCredentialsError,
+    InvalidOtpError,
     InvalidRefreshTokenError,
     InvalidTwoFactorCodeError,
+    OtpExpiredError,
     RefreshTokenExpiredError,
     RefreshTokenReuseDetectedError,
     RefreshTokenRevokedError,
     TwoFactorNotEnabledError,
 } from "./error.js";
-import { RegisterUserType } from "./schema.js";
+import { RegisterUserType, VerifyAccountType } from "./schema.js";
+import { MessageBrokerType, TOPICS } from "@shoppingcart/message-broker";
+import { AUTH_LIMITS } from "./constants.js";
 
 export function authService(deps: {
     repo: AuthRepository;
+    otpRepo: OtpRepository;
     tokenService: TokenService;
     twoFactorService: TwoFactorService;
     logger: any;
+    producer: MessageBrokerType["producer"];
 }) {
-    const { repo, tokenService, twoFactorService, logger } = deps;
+    const { repo, tokenService, twoFactorService, logger, otpRepo, producer } =
+        deps;
 
     // =================================
     // SIGNUP
@@ -35,7 +45,54 @@ export function authService(deps: {
         const existing = await repo.findUserByEmail(input.email);
 
         if (existing.length > 0) {
-            return;
+            if (existing[0].verifiedAt) {
+                logger.warn(
+                    {
+                        event: "user_signup_verified",
+                        service: "user-service",
+                        email: input.email,
+                    },
+                    "User already exists and is verified",
+                );
+                await producer.publish({
+                    topic: TOPICS.USER_CREATED_WARNING,
+                    payload: {
+                        email: input.email,
+                    },
+                });
+                return {
+                    id: existing[0].id,
+                    email: existing[0].email,
+                };
+            } else {
+                logger.warn(
+                    {
+                        event: "user_signup_unverified",
+                        service: "user-service",
+                        email: input.email,
+                    },
+                    "User already exists and is not verified",
+                );
+                const code = generateOTP();
+                const hashedCode = await hashPassword(code, 12);
+                await otpRepo.createOtp({
+                    userId: existing[0].id,
+                    code: hashedCode,
+                    otpType: "email_verification",
+                });
+                // send created email
+                await producer.publish({
+                    topic: TOPICS.USER_CREATED,
+                    payload: {
+                        email: input.email,
+                        code,
+                    },
+                });
+                return {
+                    id: existing[0].id,
+                    email: existing[0].email,
+                };
+            }
         }
 
         const passwordHash = await hashPassword(input.password, 12);
@@ -45,6 +102,29 @@ export function authService(deps: {
             passwordHash,
         });
 
+        logger.info(
+            {
+                event: "user_created",
+                service: "user-service",
+                email: input.email,
+            },
+            "User created",
+        );
+        const code = generateOTP();
+        const hashedCode = await hashPassword(code, 12);
+        await otpRepo.createOtp({
+            userId: user.id,
+            code: hashedCode,
+            otpType: "email_verification",
+        });
+        // send created email
+        await producer.publish({
+            topic: TOPICS.USER_CREATED,
+            payload: {
+                email: input.email,
+                code,
+            },
+        });
         return {
             id: user.id,
             email: user.email,
@@ -64,6 +144,17 @@ export function authService(deps: {
         const user = users[0];
 
         if (!user) {
+            throw new InvalidCredentialsError(input.email);
+        }
+
+        if (!user.verifiedAt) {
+            logger.warn(
+                {
+                    userId: user.id,
+                    email: input.email,
+                },
+                "Login blocked: account not verified",
+            );
             throw new InvalidCredentialsError(input.email);
         }
 
@@ -95,8 +186,9 @@ export function authService(deps: {
                 },
                 "Invalid login credentials",
             );
-            if (attempts >= 5) {
-                const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+            const lockTime = await loginAttemptHandle({ attempt: attempts });
+            if (lockTime) {
+                const lockUntil = lockTime;
                 await repo.lockLogin(user.id, lockUntil);
                 logger.error(
                     {
@@ -139,6 +231,129 @@ export function authService(deps: {
             userAgent: input.userAgent,
             ip: input.ip,
         });
+    }
+
+    // =================================
+    // Verify Account
+    // =================================
+    async function verifyAccount(verifyInfo: VerifyAccountType) {
+        const { code, email } = verifyInfo;
+
+        const users = await repo.findUserByEmail(email);
+        const user = users[0];
+
+        // =========================
+        // USER VALIDATION
+        // =========================
+        if (!user) {
+            logger.warn(
+                {
+                    event: "verify_account_user_not_found",
+                    service: "user-service",
+                    email,
+                },
+                "Account verification failed: user not found",
+            );
+
+            throw new InvalidCredentialsError(email);
+        }
+
+        if (user.verifiedAt) {
+            logger.warn(
+                {
+                    event: "verify_account_already_verified",
+                    service: "user-service",
+                    userId: user.id,
+                    email,
+                },
+                "Account verification attempted on verified account",
+            );
+
+            throw new InvalidCredentialsError(email);
+        }
+
+        // =========================
+        // OTP LOOKUP
+        // =========================
+        const otp = await otpRepo.getOtp({
+            otpType: "email_verification",
+            userId: user.id,
+        });
+
+        if (!otp) {
+            logger.warn(
+                {
+                    event: "verify_account_otp_missing",
+                    service: "user-service",
+                    userId: user.id,
+                    email,
+                },
+                "Account verification failed: OTP expired or missing",
+            );
+
+            throw new OtpExpiredError();
+        }
+
+        // =========================
+        // VERIFY OTP
+        // =========================
+        const isMatch = await compareOTP(code, otp.code);
+
+        if (!isMatch) {
+            const attempt = await otpRepo.incrementOtpAttempt({
+                otpType: "email_verification",
+                userId: user.id,
+            });
+
+            logger.warn(
+                {
+                    event: "verify_account_invalid_otp",
+                    service: "user-service",
+                    userId: user.id,
+                    email,
+                    attempts: attempt,
+                },
+                "Invalid account verification code",
+            );
+
+            if (attempt >= AUTH_LIMITS.OTP_MAX_ATTEMPTS) {
+                logger.error(
+                    {
+                        event: "verify_account_otp_max_attempts",
+                        service: "user-service",
+                        userId: user.id,
+                        email,
+                    },
+                    "OTP invalidated after max verification attempts",
+                );
+            }
+
+            throw new InvalidOtpError();
+        }
+
+        // =========================
+        // SUCCESS
+        // =========================
+        await otpRepo.deleteOtp({
+            otpType: "email_verification",
+            userId: user.id,
+        });
+
+        await repo.updateVerifiedAt(user.id);
+
+        logger.info(
+            {
+                event: "account_verified",
+                service: "user-service",
+                userId: user.id,
+                email,
+            },
+            "Account verified successfully",
+        );
+
+        return {
+            verified: true,
+        } as const;
     }
 
     // =================================
@@ -482,5 +697,6 @@ export function authService(deps: {
         confirm2FA,
         setup2FA,
         disable2FA,
+        verifyAccount,
     };
 }

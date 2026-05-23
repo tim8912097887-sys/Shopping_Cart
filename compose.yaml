@@ -1,4 +1,73 @@
 services:
+    redis_service:
+        image: redis:7.2
+        container_name: redis_service
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        networks:
+            - shopping_cart_network
+        volumes:
+            - redis_data:/data
+        command: redis-server --requirepass password
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "redis-cli",
+                    "--user",
+                    "admin",
+                    "--pass",
+                    "password",
+                    "ping",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+    kafka-server:
+        image: apache/kafka:4.3.0
+        container_name: kafka-server
+        ports:
+            - "9092:9092"
+        environment:
+            # KRaft mode
+            KAFKA_NODE_ID: 1
+            KAFKA_PROCESS_ROLES: broker,controller
+            KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-server:9093
+
+            # listeners
+            KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-server:9092
+
+            KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+            # single broker dev mode
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+            KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        healthcheck:
+            test: ["CMD-SHELL", "bash -c 'nc -z localhost 9092'"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+            start_period: 20s
+        networks:
+            - shopping_cart_network
+        volumes:
+            - kafka_data:/var/lib/kafka/data
+    kafka-ui:
+        image: provectuslabs/kafka-ui
+        container_name: kafka-ui
+        ports:
+            - "8080:8080"
+        depends_on:
+            kafka-server:
+                condition: service_healthy
+        environment:
+            KAFKA_CLUSTERS_0_NAME: local
+            KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-server:9092
     user_service_db:
         image: postgres:14-alpine
         environment:
@@ -10,7 +79,7 @@ services:
         volumes:
             - user_service_db_data:/var/lib/postgresql/data
         healthcheck:
-            test: ['CMD-SHELL', 'pg_isready -U postgres -d user_service']
+            test: ["CMD-SHELL", "pg_isready -U postgres -d user_service"]
             interval: 5s
             timeout: 5s
             retries: 5
@@ -44,16 +113,18 @@ services:
         depends_on:
             user_service_db:
                 condition: service_healthy
+            kafka-server:
+                condition: service_healthy
             user_migration:
                 condition: service_completed_successfully
         healthcheck:
             test:
                 [
-                    'CMD',
-                    'wget',
-                    '--spider',
-                    '-q',
-                    'http://localhost:3001/health',
+                    "CMD",
+                    "wget",
+                    "--spider",
+                    "-q",
+                    "http://localhost:3001/health",
                 ]
             interval: 10s
             timeout: 5s
@@ -62,6 +133,8 @@ services:
         restart: always
 volumes:
     user_service_db_data:
+    redis_data:
+    kafka_data:
 networks:
     shopping_cart_network:
         driver: bridge

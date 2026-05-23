@@ -5,7 +5,10 @@ import authRepoPlugin from "#plugins/auth-repo.js";
 import tokenServicePlugin from "#plugins/token-service.js";
 import twoFactorServicePlugin from "#plugins/two-factor-service.js";
 import authServicePlugin from "#plugins/auth-service.js";
+import redisPlugin from "#plugins/redis.js";
+import otpRepoPlugin from "#plugins/otp-repo.js";
 import cookiePlugin from "#plugins/cookie.js";
+import kafkaPlugin from "#plugins/kafka.js";
 import { authRoutes } from "./modules/auth/route.js";
 import authenticate from "./plugins/authenticate.js";
 import {
@@ -28,13 +31,15 @@ export async function initializeApp() {
     // ======================
     await app.register(dbPlugin);
     await app.register(cookiePlugin);
-
+    await app.register(redisPlugin);
+    await app.register(kafkaPlugin);
     // jwt / redis / config here too if used
 
     // ======================
     // Repositories
     // ======================
     await app.register(authRepoPlugin);
+    await app.register(otpRepoPlugin);
 
     // ======================
     // Stateless services

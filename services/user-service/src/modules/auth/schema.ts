@@ -40,3 +40,13 @@ export const verify2FASchema = z.object({
 });
 
 export type Verify2FAType = z.infer<typeof verify2FASchema>;
+
+export const VerifyAccountSchema = z.object({
+    code: z
+        .string()
+        .length(6, "OTP code must be 6 characters long")
+        .regex(/^\d+$/, "OTP code must contain only digits"),
+    email: z.email("Invalid Email").trim().toLowerCase(),
+});
+
+export type VerifyAccountType = z.infer<typeof VerifyAccountSchema>;

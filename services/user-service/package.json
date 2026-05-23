@@ -26,6 +26,8 @@
         "@fastify/cookie": "catalog:",
         "@fastify/jwt": "catalog:",
         "@shoppingcart/logger": "workspace:*",
+        "@shoppingcart/message-broker": "workspace:*",
+        "@vitest/coverage-v8": "catalog:",
         "bcrypt-ts": "catalog:",
         "dotenv": "catalog:",
         "drizzle-orm": "catalog:",
@@ -36,9 +38,9 @@
         "otpauth": "catalog:",
         "pg": "catalog:",
         "qrcode": "catalog:",
-        "zod": "catalog:",
+        "redis": "catalog:",
         "vitest": "catalog:",
-        "@vitest/coverage-v8": "catalog:"
+        "zod": "catalog:"
     },
     "devDependencies": {
         "@types/pg": "catalog:",
