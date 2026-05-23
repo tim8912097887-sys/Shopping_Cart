@@ -2,85 +2,42 @@ import crypto from "node:crypto";
 import { describe, expect, it, beforeEach, vi, Mocked } from "vitest";
 import { authService } from "#modules/auth/service.js";
 import * as authUtil from "#modules/auth/util.js";
-import type { RegisterUserType } from "#modules/auth/schema.js";
+import type { VerifyAccountType } from "#modules/auth/schema.js";
 import {
     AccountLockedError,
     InvalidCredentialsError,
+    InvalidOtpError,
     InvalidRefreshTokenError,
     InvalidTwoFactorCodeError,
+    OtpExpiredError,
     RefreshTokenExpiredError,
     RefreshTokenReuseDetectedError,
     RefreshTokenRevokedError,
     TwoFactorNotEnabledError,
 } from "#modules/auth/error.js";
 import { AuthRepository } from "#modules/auth/repository.js";
+import { MessageBrokerType, TOPICS } from "@shoppingcart/message-broker";
 import {
     AuthService,
     TokenService,
     TwoFactorService,
+    OtpRepository,
 } from "#modules/auth/types.js";
-
-const makeAuthUser = (overrides: Partial<Record<string, any>> = {}) => ({
-    id: "user-id",
-    email: "user@example.com",
-    password: "hashed-password",
-    twoFactorEnabled: false,
-    failLoginAttempts: 0,
-    loginLockUntil: null,
-    twoFactorSecret: null,
-    lastLoginAt: new Date(),
-    passwordChangedAt: new Date(),
-    verifiedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: null,
-    ...overrides,
-});
-
-const makeRegisterData = (
-    overrides: Partial<RegisterUserType> = {},
-): RegisterUserType => ({
-    email: "user@example.com",
-    password: "SecurePassword123!",
-    ...overrides,
-});
-
-const makeLoginData = (
-    overrides: Partial<{
-        email: string;
-        password: string;
-        userAgent?: string;
-        ip?: string;
-    }> = {},
-) => ({
-    email: "user@example.com",
-    password: "SecurePassword123!",
-    userAgent: "user-agent",
-    ip: "127.0.0.1",
-    ...overrides,
-});
-
-const makeSession = (overrides: Partial<Record<string, any>> = {}) => ({
-    id: "session-id",
-    userId: "user-id",
-    tokenFamily: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-    refreshTokenHash: "hashed-refresh-secret",
-    userAgent: "user-agent",
-    ip: "127.0.0.1",
-    lastUsedAt: new Date(),
-    expiresAt: new Date(Date.now() + 100000),
-    revokedAt: null,
-    compromisedAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-});
+import { AUTH_LIMITS } from "#modules/auth/constants.js";
+import {
+    makeAuthUser,
+    makeLoginData,
+    makeRegisterData,
+    makeSession,
+} from "#__tests__/utils/auth.js";
 
 describe("Auth Service", () => {
     let mockRepo: Mocked<AuthRepository>;
+    let mockOtpRepo: Mocked<OtpRepository>;
     let mockTokenService: Mocked<TokenService>;
     let mockTwoFactorService: Mocked<TwoFactorService>;
     let mockLogger: Record<string, any>;
+    let mockProducer: Mocked<MessageBrokerType["producer"]>;
     let auth: Mocked<AuthService>;
 
     beforeEach(() => {
@@ -92,6 +49,7 @@ describe("Auth Service", () => {
             lockLogin: vi.fn(),
             resetLoginAttempts: vi.fn(),
             updateLastLogin: vi.fn(),
+            updateVerifiedAt: vi.fn(),
             saveTwoFactorSecret: vi.fn(),
             enableTwoFactor: vi.fn(),
             disableTwoFactor: vi.fn(),
@@ -104,6 +62,15 @@ describe("Auth Service", () => {
             revokeSession: vi.fn(),
             revokeAllSessions: vi.fn(),
         } as unknown as Mocked<AuthRepository>;
+
+        mockOtpRepo = {
+            createOtp: vi.fn(),
+            getOtp: vi.fn(),
+            incrementOtpAttempt: vi.fn(),
+            deleteOtp: vi.fn(),
+            getCooldownTtl: vi.fn(),
+            otpExists: vi.fn(),
+        } as unknown as Mocked<OtpRepository>;
 
         mockTokenService = {
             signAccessToken: vi.fn(),
@@ -121,11 +88,17 @@ describe("Auth Service", () => {
             error: vi.fn(),
         };
 
+        mockProducer = {
+            publish: vi.fn(),
+        } as unknown as Mocked<MessageBrokerType["producer"]>;
+
         auth = authService({
             repo: mockRepo,
+            otpRepo: mockOtpRepo,
             tokenService: mockTokenService,
             twoFactorService: mockTwoFactorService,
             logger: mockLogger,
+            producer: mockProducer,
         }) as unknown as Mocked<AuthService>;
     });
 
@@ -140,6 +113,7 @@ describe("Auth Service", () => {
 
             mockRepo.findUserByEmail.mockResolvedValue(existingUser);
             mockRepo.createUser.mockResolvedValue(createdUser);
+            vi.spyOn(authUtil, "generateOTP").mockReturnValue("123456");
             vi.spyOn(authUtil, "hashPassword").mockResolvedValue(
                 "hashed-password",
             );
@@ -155,22 +129,190 @@ describe("Auth Service", () => {
                 email: input.email,
                 passwordHash: "hashed-password",
             });
+            expect(mockOtpRepo.createOtp).toHaveBeenCalledWith({
+                userId: createdUser.id,
+                code: "hashed-password",
+                otpType: "email_verification",
+            });
+            expect(mockProducer.publish).toHaveBeenCalledWith({
+                topic: TOPICS.USER_CREATED,
+                payload: {
+                    email: input.email,
+                    code: "123456",
+                },
+            });
             expect(result).toEqual({
                 id: createdUser.id,
                 email: createdUser.email,
             });
         });
 
-        it("does not create a user when the email already exists", async () => {
+        it("resends a verification OTP when the email exists and is not verified", async () => {
             const input = makeRegisterData();
-            mockRepo.findUserByEmail.mockResolvedValue([
-                makeAuthUser({ email: input.email }),
-            ]);
+            const existingUser = makeAuthUser({
+                email: input.email,
+                verifiedAt: null,
+                id: "existing-id",
+            });
+
+            mockRepo.findUserByEmail.mockResolvedValue([existingUser]);
+            vi.spyOn(authUtil, "generateOTP").mockReturnValue("654321");
+            vi.spyOn(authUtil, "hashPassword").mockResolvedValue("hashed-code");
 
             const result = await auth.signup(input);
 
             expect(mockRepo.createUser).not.toHaveBeenCalled();
-            expect(result).toBeUndefined();
+            expect(mockOtpRepo.createOtp).toHaveBeenCalledWith({
+                userId: existingUser.id,
+                code: "hashed-code",
+                otpType: "email_verification",
+            });
+            expect(mockProducer.publish).toHaveBeenCalledWith({
+                topic: TOPICS.USER_CREATED,
+                payload: {
+                    email: input.email,
+                    code: "654321",
+                },
+            });
+            expect(result).toEqual({
+                id: existingUser.id,
+                email: existingUser.email,
+            });
+        });
+
+        it("returns existing verified user info when the email already exists and is verified", async () => {
+            const input = makeRegisterData();
+            const existingUser = makeAuthUser({
+                email: input.email,
+                verifiedAt: new Date(),
+                id: "existing-id",
+            });
+
+            mockRepo.findUserByEmail.mockResolvedValue([existingUser]);
+
+            const result = await auth.signup(input);
+
+            expect(mockRepo.createUser).not.toHaveBeenCalled();
+            expect(mockOtpRepo.createOtp).not.toHaveBeenCalled();
+            expect(mockProducer.publish).toHaveBeenCalledWith({
+                topic: TOPICS.USER_CREATED_WARNING,
+                payload: {
+                    email: input.email,
+                },
+            });
+            expect(result).toEqual({
+                id: existingUser.id,
+                email: existingUser.email,
+            });
+        });
+    });
+
+    describe("verifyAccount", () => {
+        const makeVerifyInput = (
+            overrides: Partial<VerifyAccountType> = {},
+        ): VerifyAccountType => ({
+            email: "user@example.com",
+            code: "123456",
+            ...overrides,
+        });
+
+        it("verifies the account when the OTP is valid", async () => {
+            const user = makeAuthUser({ verifiedAt: null });
+            const otp = { code: "hashed-code", attempt: 0 };
+            const input = makeVerifyInput();
+
+            mockRepo.findUserByEmail.mockResolvedValue([user]);
+            mockOtpRepo.getOtp.mockResolvedValue(otp as any);
+            vi.spyOn(authUtil, "compareOTP").mockResolvedValue(true);
+
+            const result = await auth.verifyAccount(input);
+
+            expect(mockOtpRepo.deleteOtp).toHaveBeenCalledWith({
+                otpType: "email_verification",
+                userId: user.id,
+            });
+            expect(mockRepo.updateVerifiedAt).toHaveBeenCalledWith(user.id);
+            expect(result).toEqual({ verified: true });
+        });
+
+        it("throws InvalidCredentialsError when the user is not found", async () => {
+            const input = makeVerifyInput();
+
+            mockRepo.findUserByEmail.mockResolvedValue([]);
+
+            await expect(auth.verifyAccount(input)).rejects.toBeInstanceOf(
+                InvalidCredentialsError,
+            );
+            expect(mockOtpRepo.getOtp).not.toHaveBeenCalled();
+        });
+
+        it("throws InvalidCredentialsError when the account is already verified", async () => {
+            const user = makeAuthUser({ verifiedAt: new Date() });
+            const input = makeVerifyInput();
+
+            mockRepo.findUserByEmail.mockResolvedValue([user]);
+
+            await expect(auth.verifyAccount(input)).rejects.toBeInstanceOf(
+                InvalidCredentialsError,
+            );
+            expect(mockOtpRepo.getOtp).not.toHaveBeenCalled();
+        });
+
+        it("throws OtpExpiredError when the verification OTP is missing", async () => {
+            const user = makeAuthUser({ verifiedAt: null });
+            const input = makeVerifyInput();
+
+            mockRepo.findUserByEmail.mockResolvedValue([user]);
+            mockOtpRepo.getOtp.mockResolvedValue(null);
+
+            await expect(auth.verifyAccount(input)).rejects.toBeInstanceOf(
+                OtpExpiredError,
+            );
+            expect(mockRepo.updateVerifiedAt).not.toHaveBeenCalled();
+        });
+
+        it("throws InvalidOtpError when the OTP code is invalid", async () => {
+            const user = makeAuthUser({ verifiedAt: null });
+            const input = makeVerifyInput();
+
+            mockRepo.findUserByEmail.mockResolvedValue([user]);
+            mockOtpRepo.getOtp.mockResolvedValue({
+                code: "hashed-code",
+            } as any);
+            vi.spyOn(authUtil, "compareOTP").mockResolvedValue(false);
+            mockOtpRepo.incrementOtpAttempt.mockResolvedValue(1);
+
+            await expect(auth.verifyAccount(input)).rejects.toBeInstanceOf(
+                InvalidOtpError,
+            );
+            expect(mockOtpRepo.incrementOtpAttempt).toHaveBeenCalledWith({
+                otpType: "email_verification",
+                userId: user.id,
+            });
+            expect(mockRepo.updateVerifiedAt).not.toHaveBeenCalled();
+        });
+
+        it("throws InvalidOtpError when the invalid OTP attempt reaches the maximum", async () => {
+            const user = makeAuthUser({ verifiedAt: null });
+            const input = makeVerifyInput();
+
+            mockRepo.findUserByEmail.mockResolvedValue([user]);
+            mockOtpRepo.getOtp.mockResolvedValue({
+                code: "hashed-code",
+            } as any);
+            vi.spyOn(authUtil, "compareOTP").mockResolvedValue(false);
+            mockOtpRepo.incrementOtpAttempt.mockResolvedValue(
+                AUTH_LIMITS.OTP_MAX_ATTEMPTS,
+            );
+
+            await expect(auth.verifyAccount(input)).rejects.toBeInstanceOf(
+                InvalidOtpError,
+            );
+            expect(mockOtpRepo.incrementOtpAttempt).toHaveBeenCalledWith({
+                otpType: "email_verification",
+                userId: user.id,
+            });
+            expect(mockRepo.updateVerifiedAt).not.toHaveBeenCalled();
         });
     });
 

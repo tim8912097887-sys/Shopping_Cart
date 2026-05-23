@@ -108,7 +108,7 @@ export type OtpRepository = {
     createOtp(createOtpInfo: CreateOtpInfo): Promise<string>;
     getOtp(
         getOtpInfo: GetOtpInfo,
-    ): Promise<{ code: string; attempt: number; createdAt: string }>;
+    ): Promise<{ code: string; attempt: number; createdAt: string } | null>;
     incrementOtpAttempt(getOtpInfo: GetOtpInfo): Promise<number>;
     deleteOtp(getOtpInfo: GetOtpInfo): Promise<number>;
     getCooldownTtl(getOtpInfo: GetOtpInfo): Promise<number>;
