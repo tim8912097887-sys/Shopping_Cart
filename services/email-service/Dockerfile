@@ -32,11 +32,11 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY . .
 
 # Build everything (Your workspace build command should build logger then user-service)
-RUN pnpm --filter=user-service... build
+RUN pnpm --filter=email-service... build
 
 # Isolate the user-service and its production dependencies into a standalone folder
 # This eliminates workspace symlinks and flattens everything into /prod/user-service
-RUN pnpm --filter=user-service deploy --legacy /prod/user-service
+RUN pnpm --filter=email-service deploy --legacy /prod/email-service
 
 # ==========================================
 # 3. Final Lean Production Stage
@@ -49,10 +49,9 @@ USER node
 
 # Copy the isolated self-contained application from the builder stage
 # This includes the exact production node_modules and the compiled shared logger!
-COPY --from=builder --chown=node:node /prod/user-service ./
-COPY --chown=node:node services/user-service/drizzle ./drizzle
+COPY --from=builder --chown=node:node /prod/email-service ./
 
-EXPOSE 3001
+EXPOSE 3002
 
 # Double check your entrypoint path inside the build artifact folder
 CMD ["node", "dist/server.js"]

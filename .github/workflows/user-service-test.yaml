@@ -8,6 +8,8 @@ on:
             - fix/**
         paths:
             - "services/user-service/**"
+            - ".github/workflows/user-service-test.yaml"
+            - "packages/**"
     pull_request:
         branches:
             - main

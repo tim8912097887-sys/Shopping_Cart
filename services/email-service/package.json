@@ -1,0 +1,32 @@
+{
+    "name": "email-service",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "type": "module",
+    "imports": {
+        "#*": "./dist/*"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "lint": "eslint ./src",
+        "lint:fix": "eslint ./src --fix"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "packageManager": "pnpm@10.26.1",
+    "dependencies": {
+        "express": "catalog:",
+        "nodemailer": "catalog:",
+        "@shoppingcart/message-broker": "workspace:*",
+        "@shoppingcart/logger": "workspace:*",
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@types/express": "catalog:",
+        "@types/nodemailer": "catalog:",
+        "tsx": "catalog:",
+        "typescript": "catalog:"
+    }
+}

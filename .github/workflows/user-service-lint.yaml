@@ -8,6 +8,7 @@ on:
             - fix/**
         paths:
             - "services/user-service/**"
+            - ".github/workflows/user-service-lint.yaml"
     pull_request:
         branches:
             - main
