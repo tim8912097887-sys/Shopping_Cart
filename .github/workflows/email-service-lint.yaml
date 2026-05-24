@@ -1,4 +1,4 @@
-name: CI-user-service-Build
+name: CI-email-service-Lint
 on:
     push:
         branches:
@@ -7,9 +7,8 @@ on:
             - feat/**
             - fix/**
         paths:
-            - "services/user-service/**"
-            - ".github/workflows/user-service-build.yaml"
-            - "packages/**"
+            - "services/email-service/**"
+            - ".github/workflows/email-service-lint.yaml"
     pull_request:
         branches:
             - main
@@ -18,7 +17,7 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
     cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
 jobs:
-    user-service-build:
+    email-service-lint:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -36,11 +35,5 @@ jobs:
                   cache-dependency-path: "pnpm-lock.yaml"
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
-            # Build shared logger first
-            - name: Build Shared Logger
-              run: pnpm --filter @shoppingcart/logger run build
-            # Build shared message broker
-            - name: Build Shared Message Broker
-              run: pnpm --filter @shoppingcart/message-broker run build
-            - name: Run build
-              run: pnpm --filter ./services/user-service run build
+            - name: Run lint
+              run: pnpm --filter ./services/email-service run lint

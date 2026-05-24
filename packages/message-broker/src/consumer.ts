@@ -2,6 +2,10 @@ import { Consumer } from "kafkajs";
 import { EventMap, EventName } from "./events.js";
 
 export class KafkaConsumer {
+    private handlers: Partial<
+        Record<EventName, (payload: any) => Promise<void>>
+    > = {};
+
     constructor(private readonly consumer: Consumer) {}
 
     async connect() {
@@ -21,13 +25,18 @@ export class KafkaConsumer {
             fromBeginning: false,
         });
 
+        this.handlers[topic] = handler;
+    }
+
+    async run() {
         await this.consumer.run({
-            eachMessage: async ({ message }) => {
+            eachMessage: async ({ topic, message }) => {
                 if (!message.value) return;
 
-                const payload = JSON.parse(
-                    message.value.toString(),
-                ) as EventMap[T];
+                const handler = this.handlers[topic as EventName];
+                if (!handler) return;
+
+                const payload = JSON.parse(message.value.toString());
 
                 await handler(payload);
             },

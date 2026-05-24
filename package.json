@@ -17,6 +17,6 @@
     "scripts": {
         "prepare": "husky",
         "lint": "pnpm -r lint",
-        "build": "pnpm -r build"
+        "build:all": "pnpm -r build"
     }
 }

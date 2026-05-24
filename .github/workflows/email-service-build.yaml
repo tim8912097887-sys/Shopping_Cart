@@ -1,4 +1,4 @@
-name: CI-user-service-Build
+name: CI-email-service-Build
 on:
     push:
         branches:
@@ -7,8 +7,8 @@ on:
             - feat/**
             - fix/**
         paths:
-            - "services/user-service/**"
-            - ".github/workflows/user-service-build.yaml"
+            - "services/email-service/**"
+            - ".github/workflows/email-service-build.yaml"
             - "packages/**"
     pull_request:
         branches:
@@ -18,7 +18,7 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
     cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
 jobs:
-    user-service-build:
+    email-service-build:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -43,4 +43,4 @@ jobs:
             - name: Build Shared Message Broker
               run: pnpm --filter @shoppingcart/message-broker run build
             - name: Run build
-              run: pnpm --filter ./services/user-service run build
+              run: pnpm --filter ./services/email-service run build

@@ -1,7 +1,7 @@
 import { AUTH_LIMITS } from "./constants.js";
-import { TooManyRequestError } from "#common/errors/too-many-request.js";
 import { CreateOtpInfo, GetOtpInfo } from "./types.js";
 import { RedisClientType } from "redis";
+import { TooManyVerificationRequestsError } from "./error.js";
 
 export function otpRepository(cacheDb: RedisClientType) {
     function getOtpKey(getOtpInfo: GetOtpInfo) {
@@ -20,8 +20,9 @@ export function otpRepository(cacheDb: RedisClientType) {
         const cooldownExists = await cacheDb.exists(cooldownKey);
 
         if (cooldownExists) {
-            throw new TooManyRequestError(
-                "Please wait before requesting another verification code.",
+            throw new TooManyVerificationRequestsError(
+                createOtpInfo.userId,
+                30,
             );
         }
 
