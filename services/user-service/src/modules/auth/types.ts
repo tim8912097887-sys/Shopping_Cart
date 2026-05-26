@@ -4,10 +4,13 @@ export interface AuthRepository {
     findByEmail(email: string): Promise<null>;
 }
 
+export type UserRole = "admin" | "user";
+
 export type AccessPayload = {
     sub: string;
     sid: string;
     typ: "access" | "refresh";
+    role: UserRole;
 };
 
 export interface TokenService {

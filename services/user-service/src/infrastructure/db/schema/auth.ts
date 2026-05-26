@@ -7,7 +7,10 @@ import {
     boolean,
     index,
     integer,
+    pgEnum,
 } from "drizzle-orm/pg-core";
+
+export const roleEnum = pgEnum("role", ["user", "admin"]);
 
 export const auth = pgTable(
     "auth",
@@ -17,6 +20,8 @@ export const auth = pgTable(
         email: varchar("email", { length: 255 }).notNull().unique(),
 
         password: text("password").notNull(),
+
+        role: roleEnum("role").default("user").notNull(),
 
         twoFactorEnabled: boolean("two_factor_enabled")
             .default(false)
