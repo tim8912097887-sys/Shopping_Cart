@@ -356,6 +356,7 @@ describe("Auth Service", () => {
                 sub: user.id,
                 sid: session.id,
                 typ: "access",
+                role: user.role,
             });
             expect(result).toEqual({
                 accessToken: "access-token",
@@ -547,6 +548,12 @@ describe("Auth Service", () => {
                 ip: "127.0.0.1",
             });
 
+            expect(mockTokenService.signAccessToken).toHaveBeenCalledWith({
+                sub: user.id,
+                sid: session.id,
+                typ: "access",
+                role: user.role,
+            });
             expect(result).toEqual({
                 accessToken: "access-token",
                 refreshToken: `${session.id}.refresh-secret`,
@@ -634,6 +641,12 @@ describe("Auth Service", () => {
             const refreshToken = `${session.id}.refresh-secret`;
 
             mockRepo.findSessionById.mockResolvedValue([session]);
+            mockRepo.findUserById.mockResolvedValue([
+                makeAuthUser({
+                    id: session.userId,
+                    role: "user",
+                }),
+            ]);
             vi.spyOn(authUtil, "compareRefreshToken").mockResolvedValue(true);
             vi.spyOn(authUtil, "generateRefreshToken").mockReturnValue(
                 `${session.id}.new-secret`,
@@ -651,6 +664,12 @@ describe("Auth Service", () => {
                 session.id,
                 "new-hashed-secret",
             );
+            expect(mockTokenService.signAccessToken).toHaveBeenCalledWith({
+                sub: session.userId,
+                sid: session.id,
+                typ: "access",
+                role: "user",
+            });
             expect(mockRepo.updateLastUsedAt).toHaveBeenCalledWith(session.id);
             expect(result).toEqual({
                 accessToken: "new-access-token",

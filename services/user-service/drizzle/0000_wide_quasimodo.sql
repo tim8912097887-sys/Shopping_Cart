@@ -1,7 +1,9 @@
+CREATE TYPE "public"."role" AS ENUM('user', 'admin');--> statement-breakpoint
 CREATE TABLE "auth" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" varchar(255) NOT NULL,
 	"password" text NOT NULL,
+	"role" "role" DEFAULT 'user' NOT NULL,
 	"two_factor_enabled" boolean DEFAULT false NOT NULL,
 	"fail_login_attempts" integer DEFAULT 0 NOT NULL,
 	"login_lock_until" timestamp,

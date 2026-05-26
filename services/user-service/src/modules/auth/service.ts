@@ -10,7 +10,12 @@ import {
     loginAttemptHandle,
 } from "./util.js";
 import type { AuthRepository } from "./repository.js";
-import { TokenService, TwoFactorService, OtpRepository } from "./types.js";
+import {
+    TokenService,
+    TwoFactorService,
+    OtpRepository,
+    UserRole,
+} from "./types.js";
 import {
     AccountLockedError,
     InvalidCredentialsError,
@@ -227,6 +232,7 @@ export function authService(deps: {
         }
 
         return issueSession({
+            role: user.role,
             userId: user.id,
             userAgent: input.userAgent,
             ip: input.ip,
@@ -486,6 +492,7 @@ export function authService(deps: {
         );
 
         return issueSession({
+            role: user.role,
             userId: user.id,
             userAgent: input.userAgent,
             ip: input.ip,
@@ -521,6 +528,7 @@ export function authService(deps: {
     // ISSUE SESSION
     // =================================
     async function issueSession(input: {
+        role: UserRole;
         userId: string;
         userAgent: string | undefined;
         ip: string | undefined;
@@ -548,6 +556,7 @@ export function authService(deps: {
             sub: input.userId,
             sid: session.id,
             typ: "access",
+            role: input.role,
         });
 
         logger.info(
@@ -642,10 +651,26 @@ export function authService(deps: {
 
         await repo.rotateRefreshToken(session.id, newHash);
 
+        const [user] = await repo.findUserById(session.userId);
+
+        if (!user) {
+            logger.warn(
+                {
+                    sessionId,
+                    userId: session.userId,
+                },
+                "Refresh token user not found",
+            );
+            throw new InvalidCredentialsError(session.userId);
+        }
+
+        const role = user.role;
+
         const accessToken = await tokenService.signAccessToken({
             sub: session.userId,
             sid: session.id,
             typ: "access",
+            role,
         });
 
         await repo.updateLastUsedAt(session.id);

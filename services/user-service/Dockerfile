@@ -19,6 +19,7 @@ COPY packages/message-broker/package.json ./packages/message-broker/
 # service manifests
 COPY services/user-service/package.json ./services/user-service/
 COPY services/email-service/package.json ./services/email-service/
+COPY services/product-service/package.json ./services/product-service/
 
 # ==========================================
 # 2. Development & Build Stage

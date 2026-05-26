@@ -1,21 +1,23 @@
-import { RegisterUserType } from "#modules/auth/schema.js";
+import type { RegisterUserType } from "#modules/auth/schema.js";
 
-export const makeAuthUser = (overrides: Partial<Record<string, any>> = {}) => ({
-    id: "user-id",
-    email: "user@example.com",
-    password: "hashed-password",
-    twoFactorEnabled: false,
-    failLoginAttempts: 0,
-    loginLockUntil: null,
-    twoFactorSecret: null,
-    lastLoginAt: new Date(),
-    passwordChangedAt: new Date(),
-    verifiedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: null,
-    ...overrides,
-});
+export const makeAuthUser = (overrides: Partial<Record<string, any>> = {}) =>
+    ({
+        id: "user-id",
+        email: "user@example.com",
+        password: "hashed-password",
+        role: "user",
+        twoFactorEnabled: false,
+        failLoginAttempts: 0,
+        loginLockUntil: null,
+        twoFactorSecret: null,
+        lastLoginAt: new Date(),
+        passwordChangedAt: new Date(),
+        verifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        ...overrides,
+    }) as any;
 
 export const makeRegisterData = (
     overrides: Partial<RegisterUserType> = {},
