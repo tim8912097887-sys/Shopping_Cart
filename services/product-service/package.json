@@ -1,0 +1,58 @@
+{
+    "name": "product-service",
+    "version": "0.0.1",
+    "description": "",
+    "author": "",
+    "private": true,
+    "license": "UNLICENSED",
+    "type": "module",
+    "imports": {
+        "#*": "./dist/*"
+    },
+    "scripts": {
+        "dev": "nest start --watch",
+        "build": "tsc -p tsconfig.build.json",
+        "lint": "eslint ./src",
+        "lint:fix": "eslint ./src --fix",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@nestjs/common": "catalog:",
+        "@nestjs/config": "catalog:",
+        "@nestjs/core": "catalog:",
+        "@nestjs/platform-express": "catalog:",
+        "@prisma/adapter-pg": "catalog:",
+        "@prisma/client": "catalog:",
+        "reflect-metadata": "catalog:",
+        "rxjs": "catalog:",
+        "zod": "catalog:",
+        "pg": "catalog:",
+        "dotenv": "catalog:",
+        "prisma": "catalog:",
+        "@shoppingcart/logger": "workspace:*",
+        "jose": "catalog:"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "@nestjs/cli": "catalog:",
+        "@nestjs/schematics": "catalog:",
+        "@nestjs/testing": "catalog:",
+        "@types/express": "catalog:",
+        "@types/node": "catalog:",
+        "@vitest/coverage-v8": "catalog:",
+        "eslint": "catalog:",
+        "globals": "catalog:",
+        "prettier": "catalog:",
+        "source-map-support": "catalog:",
+        "ts-loader": "catalog:",
+        "ts-node": "catalog:",
+        "tsconfig-paths": "catalog:",
+        "tsx": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:",
+        "vitest": "catalog:",
+        "@types/pg": "catalog:"
+    }
+}

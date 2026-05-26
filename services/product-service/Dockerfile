@@ -1,0 +1,64 @@
+ARG NODE_VERSION=24
+FROM node:${NODE_VERSION}-alpine AS base
+
+# Install system prerequisites (Prisma requires openssl)
+RUN apk add --no-cache openssl
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_CONFIG_STORE_DIR="/pnpm/store"
+RUN corepack enable
+
+# ==========================================
+# 1. Prereq Stage: Copy all structural files
+# ==========================================
+FROM base AS prereq
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# workspace package manifests
+COPY packages/logger/package.json ./packages/logger/
+COPY packages/message-broker/package.json ./packages/message-broker/
+
+# service manifests
+COPY services/user-service/package.json ./services/user-service/
+COPY services/email-service/package.json ./services/email-service/
+COPY services/product-service/package.json ./services/product-service/
+
+# ==========================================
+# 2. Development & Build Stage
+# ==========================================
+FROM prereq AS builder
+WORKDIR /app
+# Install ALL dependencies (including devDeps for building)
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+
+# Copy the rest of the source code (Ensure .dockerignore ignores local node_modules!)
+COPY . .
+
+# Build everything (Your workspace build command should build logger then user-service)
+RUN pnpm --filter=product-service... build
+
+# Isolate the user-service and its production dependencies into a standalone folder
+# This eliminates workspace symlinks and flattens everything into /prod/user-service
+RUN pnpm --filter=product-service deploy --legacy /prod/product-service
+
+# ==========================================
+# 3. Final Lean Production Stage
+# ==========================================
+FROM node:${NODE_VERSION}-alpine AS production
+WORKDIR /app
+
+# Safely switch to non-root user
+USER node
+
+# Copy the isolated self-contained application from the builder stage
+# This includes the exact production node_modules and the compiled shared logger!
+COPY --from=builder --chown=node:node /prod/product-service ./
+COPY --chown=node:node services/product-service/prisma ./prisma
+COPY --chown=node:node services/product-service/docker-entrypoint.sh ./
+
+RUN chmod +x docker-entrypoint.sh
+
+EXPOSE 3003
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
