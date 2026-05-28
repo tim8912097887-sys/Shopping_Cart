@@ -25,4 +25,4 @@ npx prisma migrate deploy --schema=./prisma/schema.prisma
 
 # 3. Start App
 echo "Migrations complete. Launching application..."
-exec node dist/main.js
+exec node -r ./dist/instrumentation.js dist/main.js

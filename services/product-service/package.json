@@ -23,16 +23,27 @@
         "@nestjs/config": "catalog:",
         "@nestjs/core": "catalog:",
         "@nestjs/platform-express": "catalog:",
+        "@opentelemetry/api": "catalog:",
+        "@opentelemetry/auto-instrumentations-node": "catalog:",
+        "@opentelemetry/exporter-trace-otlp-grpc": "catalog:",
+        "@opentelemetry/instrumentation-express": "catalog:",
+        "@opentelemetry/instrumentation-http": "catalog:",
+        "@opentelemetry/resources": "catalog:",
+        "@opentelemetry/sdk-node": "catalog:",
+        "@opentelemetry/semantic-conventions": "catalog:",
         "@prisma/adapter-pg": "catalog:",
         "@prisma/client": "catalog:",
+        "@prisma/instrumentation": "catalog:",
+        "@shoppingcart/logger": "workspace:*",
+        "@willsoto/nestjs-prometheus": "catalog:",
+        "dotenv": "catalog:",
+        "jose": "catalog:",
+        "pg": "catalog:",
+        "prisma": "catalog:",
+        "prom-client": "catalog:",
         "reflect-metadata": "catalog:",
         "rxjs": "catalog:",
-        "zod": "catalog:",
-        "pg": "catalog:",
-        "dotenv": "catalog:",
-        "prisma": "catalog:",
-        "@shoppingcart/logger": "workspace:*",
-        "jose": "catalog:"
+        "zod": "catalog:"
     },
     "devDependencies": {
         "@eslint/js": "catalog:",
@@ -41,6 +52,7 @@
         "@nestjs/testing": "catalog:",
         "@types/express": "catalog:",
         "@types/node": "catalog:",
+        "@types/pg": "catalog:",
         "@vitest/coverage-v8": "catalog:",
         "eslint": "catalog:",
         "globals": "catalog:",
@@ -52,7 +64,6 @@
         "tsx": "catalog:",
         "typescript": "catalog:",
         "typescript-eslint": "catalog:",
-        "vitest": "catalog:",
-        "@types/pg": "catalog:"
+        "vitest": "catalog:"
     }
 }
