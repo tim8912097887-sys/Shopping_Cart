@@ -54,8 +54,8 @@ USER node
 # Copy the isolated self-contained application from the builder stage
 # This includes the exact production node_modules and the compiled shared logger!
 COPY --from=builder --chown=node:node /prod/product-service ./
-COPY --chown=node:node services/product-service/prisma ./prisma
-COPY --chown=node:node services/product-service/docker-entrypoint.sh ./
+COPY --from=builder --chown=node:node /app/services/product-service/prisma ./prisma
+COPY --from=builder --chown=node:node /app/services/product-service/docker-entrypoint.sh ./
 
 RUN chmod +x docker-entrypoint.sh
 

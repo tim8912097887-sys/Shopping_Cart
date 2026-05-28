@@ -5,6 +5,7 @@ import { AppService } from "./app.service.js";
 import { CategoryModule } from "./category/category.module.js";
 import { ConfigModule } from "@nestjs/config";
 import { CommonModule } from "#common/common.module.js";
+import { MonitoringModule } from "./monitoring/monitoring.module.js";
 
 @Module({
     imports: [
@@ -12,6 +13,7 @@ import { CommonModule } from "#common/common.module.js";
             isGlobal: true,
             envFilePath: ".env.dev", // or .env
         }),
+        MonitoringModule,
         CategoryModule,
         CommonModule,
     ],

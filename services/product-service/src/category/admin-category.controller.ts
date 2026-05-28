@@ -8,7 +8,7 @@ import {
     Post,
     UseGuards,
 } from "@nestjs/common";
-import { CategoryService } from "./category.service.js";
+import { CategoryCommandService } from "./category-command.service.js";
 import {
     createCategorySchema,
     type CreateCategoryDto,
@@ -26,16 +26,20 @@ import { successResponse } from "#common/response/success.js";
 import { JwtAuthGuard } from "#auth/jwt-auth.guard.js";
 import { RolesGuard } from "#auth/roles.guard.js";
 import { Roles } from "#auth/roles.decorator.js";
+import { CategoryQueryService } from "./category-query.service.js";
 
 @Controller("admin/categories")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles("admin")
-export class CategoryController {
-    constructor(private readonly categoryService: CategoryService) {}
+export class AdminCategoryController {
+    constructor(
+        private readonly categoryCommandService: CategoryCommandService,
+        private readonly categoryQueryService: CategoryQueryService,
+    ) {}
 
     @Get()
     async findAll() {
-        const categories = await this.categoryService.findAll();
+        const categories = await this.categoryQueryService.findAdminAll();
         const data = {
             categories,
             message: "Categories fetched successfully",
@@ -48,7 +52,9 @@ export class CategoryController {
         @Param(new ZodValidationPipe(categoryIdSchema))
         params: CategoryIdDto,
     ) {
-        const category = await this.categoryService.findOne(params.id);
+        const category = await this.categoryQueryService.findAdminOne(
+            params.id,
+        );
         const data = { category, message: "Category fetched successfully" };
         return successResponse(data);
     }
@@ -58,7 +64,7 @@ export class CategoryController {
         @Body(new ZodValidationPipe(createCategorySchema))
         dto: CreateCategoryDto,
     ) {
-        const category = await this.categoryService.create(dto);
+        const category = await this.categoryCommandService.create(dto);
         const data = { category, message: "Category created successfully" };
         return successResponse(data);
     }
@@ -70,7 +76,10 @@ export class CategoryController {
         @Body(new ZodValidationPipe(updateCategorySchema))
         dto: UpdateCategoryDto,
     ) {
-        const category = await this.categoryService.update(params.id, dto);
+        const category = await this.categoryCommandService.update(
+            params.id,
+            dto,
+        );
         const data = { category, message: "Category updated successfully" };
         return successResponse(data);
     }
@@ -80,7 +89,7 @@ export class CategoryController {
         @Param(new ZodValidationPipe(categoryIdSchema))
         params: CategoryIdDto,
     ) {
-        await this.categoryService.remove(params.id);
+        await this.categoryCommandService.remove(params.id);
         const data = { message: "Category deleted successfully" };
         return successResponse(data);
     }

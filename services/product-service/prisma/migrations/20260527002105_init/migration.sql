@@ -14,9 +14,6 @@ CREATE TABLE "Category" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Category_slug_key" ON "Category"("slug");
-
--- CreateIndex
 CREATE INDEX "Category_parentId_idx" ON "Category"("parentId");
 
 -- CreateIndex
